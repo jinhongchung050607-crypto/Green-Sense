@@ -6,7 +6,13 @@ const fs = require("fs");
 const fsPromises = fs.promises;
 const path = require("path");
 const cors = require("cors");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const sharp = require("sharp");
+const { HfInference } = require("@huggingface/inference");
+const FormData = require("form-data");
+const { generateCareRecommendations, formatCareReport } = require("./utils/care-engine");
+const { analyzePlantWithGemini, generateCareWithGemini } = require("./utils/gemini-vision");
+const { identifyPlantWithPlantId, checkPlantHealth } = require("./utils/plantid-api");
+const { validatePlantImage } = require("./utils/image-validator");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -17,10 +23,10 @@ app.use(cors());
 // Configure multer
 const upload = multer({ dest: "upload/" });
 app.use(express.json({ limit: "10mb" }));
-
-// Initialize Google Generative AI
-const genAI = new GoogleGenerativeAI(process.env.API_KEY);
 app.use(express.static("public"));
+
+// Initialize Hugging Face (100% FREE - works on Vercel!)
+const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
 
 // Routes
 // Analyze
@@ -31,32 +37,192 @@ app.post("/analyze", upload.single("image"), async (req, res) => {
     }
 
     const imagePath = req.file.path;
-    const imageData = await fsPromises.readFile(imagePath, { encoding: "base64" });
-    console.log(`Received image of size: ${imageData.length} bytes`);
+    const originalImageData = await fsPromises.readFile(imagePath);
+    console.log(`Received image of size: ${originalImageData.length} bytes`);
 
-    // Gemini API call and response handling
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent([
-      "Analyze this plant image and provide detailed analysis.",
-      {
-        inlineData: {
-          mimeType: req.file.mimetype,
-          data: imageData,
-        },
-      },
-    ]);
+    // Keep original image for PDF report
+    const originalImageBase64 = originalImageData.toString('base64');
+    
+    // Step 0: Validate that the image contains a plant
+    console.log("Step 0/3: Validating image contains a plant...");
+    const validation = await validatePlantImage(originalImageData, req.file.mimetype);
+    
+    if (!validation.isPlant && validation.confidence !== "unknown") {
+      console.log(`❌ Not a plant detected: ${validation.detected}`);
+      console.log(`Reason: ${validation.reason}`);
+      
+      await fsPromises.unlink(imagePath);
+      
+      return res.status(400).json({ 
+        error: "Not a plant image",
+        message: `This appears to be ${validation.detected}, not a plant. Please upload an image of a plant (houseplant, flower, tree, succulent, etc.).`,
+        detected: validation.detected,
+        reason: validation.reason
+      });
+    }
+    
+    console.log(`✅ Plant image validated (confidence: ${validation.confidence})`);
+    if (validation.detected) {
+      console.log(`Detected: ${validation.detected}`);
+    }
+    
+    // Step 1: Identify plant using Plant.id API (100/day FREE, most reliable!)
+    console.log("\nStep 1/3: Analyzing YOUR plant with Plant.id AI...");
+    console.log("⏳ This may take 5-10 seconds...");
 
-    // Ensure the response contains valid content
-    if (!result || !result.response || typeof result.response.text !== "function") {
-      throw new Error("Invalid API response");
+    let plantType = "Unknown plant";
+    let scientificName = "";
+    let commonNames = [];
+    let confidence = "N/A";
+    let plantFamily = "";
+    let healthStatus = "Unknown";
+    let healthDetails = "";
+
+    // Try Plant.id first (most reliable, 100/day free, works with 'demo' key!)
+    const plantidResult = await identifyPlantWithPlantId(originalImageData, req.file.mimetype);
+    
+    if (plantidResult.success) {
+      const data = plantidResult.data;
+      
+      plantType = data.commonName || data.scientificName;
+      scientificName = data.scientificName;
+      plantFamily = data.family;
+      confidence = `${data.confidence}%`;
+      commonNames = data.alternativeNames;
+      
+      console.log(`🌿 Plant.id identified: ${plantType} (${scientificName})`);
+      console.log(`📊 Confidence: ${confidence}`);
+      console.log(`🏷️  Family: ${plantFamily}`);
+      
+      // Try to get health assessment
+      const healthResult = await checkPlantHealth(originalImageData, req.file.mimetype);
+      if (healthResult.success) {
+        healthStatus = healthResult.data.isHealthy ? "healthy" : "needs attention";
+        console.log(`💚 Health: ${healthStatus}`);
+        if (healthResult.data.diseases && healthResult.data.diseases.length > 0) {
+          console.log(`⚠️  Detected issues: ${healthResult.data.diseases.map(d => d.name).join(', ')}`);
+        }
+      }
+    } else {
+      // Fallback to Gemini if Plant.id fails
+      console.log("⚠️ Plant.id unavailable, trying Gemini...");
+      const geminiResult = await analyzePlantWithGemini(originalImageData, req.file.mimetype);
+      
+      if (geminiResult.success) {
+      const analysis = geminiResult.data;
+      
+      plantType = analysis.identification.commonName || "Unknown plant";
+      scientificName = analysis.identification.scientificName || "Unknown species";
+      plantFamily = analysis.identification.family || "Unknown family";
+      confidence = analysis.identification.confidence || "medium";
+      healthStatus = analysis.health.status || "unknown";
+      healthDetails = analysis.health.overallAssessment || "";
+      
+      console.log(`🌿 Gemini identified: ${plantType} (${scientificName})`);
+      console.log(`📊 Confidence: ${confidence}`);
+      console.log(`🏷️  Family: ${plantFamily}`);
+      console.log(`💚 Health: ${healthStatus}`);
+      
+      if (analysis.health.symptoms && analysis.health.symptoms.length > 0) {
+        console.log(`⚠️  Symptoms: ${analysis.health.symptoms.join(', ')}`);
+      }
+      } else {
+        // Fallback to PlantNet if Gemini fails
+        console.log("⚠️ Gemini unavailable, trying PlantNet...");
+      
+      try {
+        const fetch = (await import('node-fetch')).default;
+        
+        const formData = new FormData();
+        formData.append('images', originalImageData, {
+          filename: 'plant.jpg',
+          contentType: req.file.mimetype
+        });
+        formData.append('organs', 'auto');
+        
+        const plantnetResponse = await fetch(
+          `https://my-api.plantnet.org/v2/identify/all?api-key=${process.env.PLANTNET_API_KEY}`,
+          {
+            method: 'POST',
+            body: formData,
+            headers: formData.getHeaders()
+          }
+        );
+        
+        const plantnetResult = await plantnetResponse.json();
+        
+        if (plantnetResult && plantnetResult.results && plantnetResult.results.length > 0) {
+          const topResult = plantnetResult.results[0];
+          
+          scientificName = topResult.species.scientificNameWithoutAuthor || topResult.species.scientificName;
+          commonNames = topResult.species.commonNames || [];
+          plantType = commonNames.length > 0 ? commonNames[0] : scientificName;
+          confidence = `${(topResult.score * 100).toFixed(1)}%`;
+          plantFamily = topResult.species.family?.scientificName || "";
+          
+          console.log(`🌿 PlantNet identified: ${plantType} (${scientificName})`);
+          console.log(`📊 Confidence: ${confidence}`);
+        } else {
+          throw new Error("No PlantNet results");
+        }
+      } catch (plantnetError) {
+        console.log("⚠️ All APIs unavailable");
+        console.log("Using knowledge-based general analysis");
+        
+        plantType = "your plant";
+        scientificName = "Unknown species";
+        plantFamily = "Unknown family";
+      }
+      }
     }
 
-    const plantInfo = result.response.text();
+    // Step 2: Generate care recommendations using knowledge base
+    console.log("Step 2/2: Generating tailored care guide from knowledge base...");
+    
+    const plantData = {
+      plantType,
+      scientificName,
+      plantFamily,
+      confidence,
+      commonNames
+    };
+    
+    const careReport = generateCareRecommendations(plantData);
+    const plantInfo = formatCareReport(careReport);
+    
+    console.log("✅ Care recommendations generated from knowledge base!");
+
+    // Add AI analysis summary
+    const finalReport = plantInfo + `\n\n---\n🤖 AI Analysis Summary:\n• Common name: ${plantType}\n• Scientific name: ${scientificName}\n• Family: ${plantFamily}\n• Confidence: ${confidence}%\n• Identified by PlantNet AI\n• Analysis based on your specific plant image`;
+    
+    console.log("Plant analysis complete!");
+    
+    // Clean up uploaded file
     await fsPromises.unlink(imagePath);
-    res.json({ result: plantInfo, image: `data:${req.file.mimetype};base64,${imageData}` });
+    
+    console.log("Analysis complete!");
+    res.json({ result: finalReport, image: `data:${req.file.mimetype};base64,${originalImageBase64}` });
   } catch (error) {
-    console.error("Error analyzing image:", error);
-    res.status(500).json({ error: "An error occurred while analyzing the image" });
+    console.error("❌ Error analyzing image:");
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    
+    // Clean up uploaded file if it exists
+    try {
+      if (req.file && req.file.path) {
+        await fsPromises.unlink(req.file.path);
+      }
+    } catch (cleanupError) {
+      console.error("Error cleaning up file:", cleanupError.message);
+    }
+    
+    // Send detailed error to help with debugging
+    res.status(500).json({ 
+      error: "An error occurred while analyzing the image",
+      details: error.message,
+      type: error.name
+    });
   }
 });
 

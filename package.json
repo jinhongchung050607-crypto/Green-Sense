@@ -1,19 +1,35 @@
 {
-  "name": "np",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "green-sense",
+  "version": "2.0.0",
+  "description": "AI-Powered Plant Health Analysis Platform",
+  "main": "app.js",
   "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "plant",
+    "ai",
+    "health",
+    "analysis",
+    "agriculture"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
-    "@google/generative-ai": "^0.20.0",
+    "@google/generative-ai": "^0.24.1",
+    "@huggingface/inference": "^2.8.1",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "form-data": "^4.0.4",
     "multer": "^1.4.5-lts.1",
-    "pdfkit": "^0.15.0"
+    "node-fetch": "^2.7.0",
+    "pdfkit": "^0.15.0",
+    "sharp": "^0.34.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
   }
 }

@@ -1,0 +1,68 @@
+{
+  "care_by_family": {
+    "Araceae": {
+      "common_plants": ["Monstera", "Pothos", "Philodendron", "Peace Lily"],
+      "watering": "Water when top 1-2 inches of soil are dry. Prefers consistently moist but not waterlogged soil.",
+      "light": "Bright, indirect light. Can tolerate low light but grows slower.",
+      "humidity": "Prefers 50-60% humidity. Mist regularly or use humidifier.",
+      "temperature": "65-80°F (18-27°C). Avoid cold drafts.",
+      "soil": "Well-draining potting mix with peat moss or coco coir.",
+      "fertilizer": "Monthly during growing season (spring/summer) with balanced liquid fertilizer.",
+      "common_issues": ["Root rot from overwatering", "Brown tips from low humidity", "Yellow leaves from overwatering"]
+    },
+    "Cactaceae": {
+      "common_plants": ["Cactus", "Prickly Pear", "Barrel Cactus"],
+      "watering": "Water sparingly. Allow soil to dry completely between waterings. Water every 2-3 weeks in summer, monthly in winter.",
+      "light": "Full sun to bright light. Needs 4-6 hours of direct sunlight.",
+      "humidity": "Low humidity preferred. 10-30% is ideal.",
+      "temperature": "70-90°F (21-32°C) during day. Can tolerate cooler nights.",
+      "soil": "Cactus/succulent mix with excellent drainage. Add sand or perlite.",
+      "fertilizer": "Monthly during growing season with diluted cactus fertilizer.",
+      "common_issues": ["Root rot from overwatering", "Etiolation from insufficient light", "Sunburn from sudden sun exposure"]
+    },
+    "Asparagaceae": {
+      "common_plants": ["Snake Plant", "Spider Plant", "Asparagus Fern"],
+      "watering": "Water when soil is dry. Very drought-tolerant. Every 2-3 weeks.",
+      "light": "Low to bright indirect light. Very adaptable.",
+      "humidity": "Average humidity 30-50%. Not fussy.",
+      "temperature": "60-80°F (15-27°C). Tolerates wide range.",
+      "soil": "Well-draining potting mix. Can handle poor soil.",
+      "fertilizer": "Monthly during growing season. Can survive without fertilizer.",
+      "common_issues": ["Root rot from overwatering", "Brown tips from fluoride in water", "Slow growth from low light"]
+    },
+    "Marantaceae": {
+      "common_plants": ["Prayer Plant", "Calathea", "Stromanthe"],
+      "watering": "Keep soil consistently moist but not soggy. Water when top inch is dry.",
+      "light": "Medium to low indirect light. Avoid direct sun.",
+      "humidity": "High humidity 60-80%. Use humidifier or pebble tray.",
+      "temperature": "65-75°F (18-24°C). Avoid temperature fluctuations.",
+      "soil": "Rich, well-draining potting mix with peat moss.",
+      "fertilizer": "Every 2 weeks during growing season with diluted fertilizer.",
+      "common_issues": ["Brown edges from low humidity", "Curling leaves from underwatering", "Fading patterns from too much light"]
+    }
+  },
+  "general_care_tips": {
+    "watering": {
+      "signs_of_overwatering": ["Yellow leaves", "Wilting despite wet soil", "Mushy stems", "Mold on soil"],
+      "signs_of_underwatering": ["Drooping leaves", "Dry, crispy leaves", "Slow growth", "Leaf drop"],
+      "best_practices": ["Check soil moisture before watering", "Water thoroughly until it drains", "Use room temperature water", "Water in morning"]
+    },
+    "light": {
+      "full_sun": "6+ hours direct sunlight",
+      "bright_indirect": "Bright room, no direct sun rays",
+      "medium_light": "Near window with sheer curtain",
+      "low_light": "North-facing window or away from windows",
+      "signs_of_too_much_light": ["Scorched leaves", "Fading colors", "Dry, crispy leaves"],
+      "signs_of_too_little_light": ["Leggy growth", "Small leaves", "Loss of variegation", "Slow growth"]
+    },
+    "humidity": {
+      "increase_methods": ["Use humidifier", "Group plants together", "Pebble tray with water", "Mist regularly", "Place in bathroom"],
+      "signs_of_low_humidity": ["Brown leaf tips", "Crispy edges", "Leaf curl", "Slow growth"]
+    },
+    "repotting": {
+      "when_to_repot": ["Roots growing out of drainage holes", "Water runs straight through", "Plant top-heavy", "Soil depleted", "Every 1-2 years"],
+      "best_time": "Spring or early summer during active growth",
+      "pot_size": "Choose pot 1-2 inches larger in diameter"
+    }
+  }
+}

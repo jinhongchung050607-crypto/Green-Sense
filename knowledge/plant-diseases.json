@@ -1,0 +1,54 @@
+{
+  "common_diseases": [
+    {
+      "name": "Leaf Blight",
+      "symptoms": ["brown spots on leaves", "yellowing", "wilting"],
+      "causes": ["fungal infection", "high humidity", "poor air circulation"],
+      "treatment": ["Remove affected leaves", "Apply fungicide", "Reduce humidity", "Improve air circulation"],
+      "prevention": ["Avoid overhead watering", "Space plants properly", "Remove dead leaves promptly"]
+    },
+    {
+      "name": "Root Rot",
+      "symptoms": ["yellowing leaves", "wilting despite wet soil", "mushy roots", "foul smell"],
+      "causes": ["overwatering", "poor drainage", "fungal infection"],
+      "treatment": ["Stop watering immediately", "Remove plant from pot", "Cut away rotted roots", "Repot in fresh, well-draining soil"],
+      "prevention": ["Water only when soil is dry", "Ensure proper drainage", "Use well-draining soil mix"]
+    },
+    {
+      "name": "Powdery Mildew",
+      "symptoms": ["white powdery coating on leaves", "distorted growth", "leaf drop"],
+      "causes": ["fungal infection", "high humidity", "poor air circulation"],
+      "treatment": ["Remove affected leaves", "Apply neem oil or fungicide", "Increase air circulation"],
+      "prevention": ["Avoid overcrowding", "Water at base of plant", "Ensure good ventilation"]
+    },
+    {
+      "name": "Spider Mites",
+      "symptoms": ["tiny webs on leaves", "yellow stippling", "leaf drop"],
+      "causes": ["pest infestation", "dry conditions", "stressed plants"],
+      "treatment": ["Spray with water to dislodge mites", "Apply neem oil", "Use insecticidal soap"],
+      "prevention": ["Maintain humidity", "Regular inspection", "Quarantine new plants"]
+    },
+    {
+      "name": "Aphids",
+      "symptoms": ["sticky residue on leaves", "curled leaves", "visible small insects"],
+      "causes": ["pest infestation", "new growth attracts them"],
+      "treatment": ["Spray with water", "Apply neem oil", "Use insecticidal soap", "Introduce ladybugs"],
+      "prevention": ["Regular inspection", "Encourage beneficial insects", "Avoid over-fertilizing"]
+    },
+    {
+      "name": "Nutrient Deficiency",
+      "symptoms": ["yellowing leaves", "stunted growth", "pale coloration"],
+      "causes": ["lack of nutrients", "poor soil", "incorrect pH"],
+      "treatment": ["Apply balanced fertilizer", "Check soil pH", "Add compost or organic matter"],
+      "prevention": ["Regular fertilization during growing season", "Use quality potting mix", "Test soil periodically"]
+    }
+  ],
+  "symptom_analysis": {
+    "yellow_leaves": ["overwatering", "nutrient deficiency", "root rot", "natural aging"],
+    "brown_tips": ["low humidity", "fluoride in water", "over-fertilization", "underwatering"],
+    "wilting": ["underwatering", "overwatering", "root rot", "heat stress"],
+    "spots_on_leaves": ["fungal infection", "bacterial infection", "pest damage"],
+    "drooping": ["underwatering", "overwatering", "temperature shock"],
+    "leaf_drop": ["environmental stress", "overwatering", "pest infestation", "natural process"]
+  }
+}
