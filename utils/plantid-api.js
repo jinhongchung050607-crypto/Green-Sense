@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+// Use native fetch API (available in Node.js 18+)
 
 /**
  * Identify plant using Plant.id API (100/day FREE, no credit card)

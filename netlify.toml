@@ -1,0 +1,19 @@
+[build]
+  command = "echo 'No build needed'"
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["knowledge/**", "utils/**"]
+  external_node_modules = ["sharp", "@img/sharp-linux-x64", "@img/sharp-libvips-linux-x64"]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -49,3 +49,6 @@ coverage/
 .tmp/
 
 .vercel
+
+# Netlify
+.netlify/
