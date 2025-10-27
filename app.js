@@ -7,7 +7,6 @@ const fsPromises = fs.promises;
 const path = require("path");
 const cors = require("cors");
 const sharp = require("sharp");
-const { HfInference } = require("@huggingface/inference");
 const FormData = require("form-data");
 const { generateCareRecommendations, formatCareReport } = require("./utils/care-engine");
 const { analyzePlantWithGemini, generateCareWithGemini } = require("./utils/gemini-vision");
@@ -20,24 +19,28 @@ const port = process.env.PORT || 5000;
 // Configure CORS
 app.use(cors());
 
-// Configure multer
-const upload = multer({ dest: "upload/" });
-app.use(express.json({ limit: "10mb" }));
-app.use(express.static("public"));
+// Configure multer for memory storage (important for Vercel)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
-// Initialize Hugging Face (100% FREE - works on Vercel!)
-const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
+app.use(express.static("public"));
 
 // Routes
 // Analyze
-app.post("/analyze", upload.single("image"), async (req, res) => {
+app.post("/api/analyze", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No image file uploaded" });
     }
 
-    const imagePath = req.file.path;
-    const originalImageData = await fsPromises.readFile(imagePath);
+    // Get image data from memory storage
+    const originalImageData = req.file.buffer;
     console.log(`Received image of size: ${originalImageData.length} bytes`);
 
     // Keep original image for PDF report
@@ -50,8 +53,6 @@ app.post("/analyze", upload.single("image"), async (req, res) => {
     if (!validation.isPlant && validation.confidence !== "unknown") {
       console.log(`❌ Not a plant detected: ${validation.detected}`);
       console.log(`Reason: ${validation.reason}`);
-      
-      await fsPromises.unlink(imagePath);
       
       return res.status(400).json({ 
         error: "Not a plant image",
@@ -193,12 +194,18 @@ app.post("/analyze", upload.single("image"), async (req, res) => {
     console.log("✅ Care recommendations generated from knowledge base!");
 
     // Add AI analysis summary
-    const finalReport = plantInfo + `\n\n---\n🤖 AI Analysis Summary:\n• Common name: ${plantType}\n• Scientific name: ${scientificName}\n• Family: ${plantFamily}\n• Confidence: ${confidence}%\n• Identified by PlantNet AI\n• Analysis based on your specific plant image`;
+    const finalReport = plantInfo + `
+
+---
+🤖 AI Analysis Summary:
+• Common name: ${plantType}
+• Scientific name: ${scientificName}
+• Family: ${plantFamily}
+• Confidence: ${confidence}%
+• Identified by PlantNet AI
+• Analysis based on your specific plant image`;
     
     console.log("Plant analysis complete!");
-    
-    // Clean up uploaded file
-    await fsPromises.unlink(imagePath);
     
     console.log("Analysis complete!");
     res.json({ result: finalReport, image: `data:${req.file.mimetype};base64,${originalImageBase64}` });
@@ -207,15 +214,6 @@ app.post("/analyze", upload.single("image"), async (req, res) => {
     console.error("Error name:", error.name);
     console.error("Error message:", error.message);
     console.error("Error stack:", error.stack);
-    
-    // Clean up uploaded file if it exists
-    try {
-      if (req.file && req.file.path) {
-        await fsPromises.unlink(req.file.path);
-      }
-    } catch (cleanupError) {
-      console.error("Error cleaning up file:", cleanupError.message);
-    }
     
     // Send detailed error to help with debugging
     res.status(500).json({ 
@@ -227,18 +225,21 @@ app.post("/analyze", upload.single("image"), async (req, res) => {
 });
 
 // Download PDF
-app.post("/download", express.json(), async (req, res) => {
+app.post("/api/download", express.json(), async (req, res) => {
   const { result, image } = req.body;
   try {
-    // Ensure the reports directory exists
-    const reportsDir = path.join(__dirname, "reports");
-    await fsPromises.mkdir(reportsDir, { recursive: true });
-    // Generate PDF
-    const filename = `plant_analysis_report_${Date.now()}.pdf`;
-    const filePath = path.join(reportsDir, filename);
-    const writeStream = fs.createWriteStream(filePath);
+    // Create PDF in memory instead of file system
     const doc = new PDFDocument();
-    doc.pipe(writeStream);
+    const chunks = [];
+    
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(chunks);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename=plant_analysis_report.pdf');
+      res.send(pdfBuffer);
+    });
+    
     // Add content to the PDF
     doc.fontSize(24).text("Plant Analysis Report", {
       align: "center",
@@ -259,17 +260,6 @@ app.post("/download", express.json(), async (req, res) => {
       });
     }
     doc.end();
-    // Wait for the PDF to be created
-    await new Promise((resolve, reject) => {
-      writeStream.on("finish", resolve);
-      writeStream.on("error", reject);
-    });
-    res.download(filePath, (err) => {
-      if (err) {
-        res.status(500).json({ error: "Error downloading the PDF report" });
-      }
-      fsPromises.unlink(filePath);
-    });
   } catch (error) {
     console.error("Error generating PDF report:", error);
     res
@@ -278,7 +268,22 @@ app.post("/download", express.json(), async (req, res) => {
   }
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Listening on port ${port}`);
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
 });
+
+// Serve static files for all other routes
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Vercel specific export
+module.exports = app;
+
+// Start the server only when not in Vercel environment
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Listening on port ${port}`);
+  });
+}

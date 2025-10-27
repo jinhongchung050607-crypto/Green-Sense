@@ -136,7 +136,7 @@
 
         try {
           // Send the form data directly (multipart/form-data)
-          const response = await fetch("/analyze", {
+          const response = await fetch("/api/analyze", {
             method: "POST",
             body: formData
           });
@@ -181,7 +181,7 @@
       });
 
       downloadButton.addEventListener("click", async () => {
-        const response = await fetch("/download", {
+        const response = await fetch("/api/download", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
