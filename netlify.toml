@@ -1,12 +1,12 @@
 [build]
-  command = "echo 'No build needed'"
+  command = "npm install --include=optional"
   publish = "public"
   functions = "netlify/functions"
 
 [functions]
   node_bundler = "esbuild"
   included_files = ["knowledge/**", "utils/**"]
-  external_node_modules = ["sharp", "@img/sharp-linux-x64", "@img/sharp-libvips-linux-x64"]
+  external_node_modules = ["sharp", "@img/sharp-linux-x64", "@img/sharp-libvips-linux-x64", "pdfkit"]
 
 [[redirects]]
   from = "/api/*"
