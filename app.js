@@ -7,17 +7,10 @@ const fsPromises = fs.promises;
 const path = require("path");
 const cors = require("cors");
 const sharp = require("sharp");
-const FormData = require("form-data");
 const { generateCareRecommendations, formatCareReport } = require("./utils/care-engine");
 const { analyzePlantWithGemini, generateCareWithGemini } = require("./utils/gemini-vision");
 const { identifyPlantWithPlantId, checkPlantHealth } = require("./utils/plantid-api");
 const { validatePlantImage } = require("./utils/image-validator");
-
-// Handle dynamic import for node-fetch
-let fetch;
-(async () => {
-  fetch = (await import('node-fetch')).default;
-})();
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -134,46 +127,12 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
         console.log(`⚠️  Symptoms: ${analysis.health.symptoms.join(', ')}`);
       }
       } else {
-        // Fallback to PlantNet if Gemini fails
-        console.log("⚠️ Gemini unavailable, trying PlantNet...");
-      
-        // Use the fetch function that was dynamically imported
-        if (!fetch) {
-          fetch = (await import('node-fetch')).default;
-        }
+        console.log("⚠️ All APIs unavailable");
+        console.log("Using knowledge-based general analysis");
         
-        const formData = new FormData();
-        formData.append('images', originalImageData, {
-          filename: 'plant.jpg',
-          contentType: req.file.mimetype
-        });
-        formData.append('organs', 'auto');
-        
-        const plantnetResponse = await fetch(
-          `https://my-api.plantnet.org/v2/identify/all?api-key=${process.env.PLANTNET_API_KEY}`,
-          {
-            method: 'POST',
-            body: formData,
-            headers: formData.getHeaders()
-          }
-        );
-        
-        const plantnetResult = await plantnetResponse.json();
-        
-        if (plantnetResult && plantnetResult.results && plantnetResult.results.length > 0) {
-          const topResult = plantnetResult.results[0];
-          
-          scientificName = topResult.species.scientificNameWithoutAuthor || topResult.species.scientificName;
-          commonNames = topResult.species.commonNames || [];
-          plantType = commonNames.length > 0 ? commonNames[0] : scientificName;
-          confidence = `${(topResult.score * 100).toFixed(1)}%`;
-          plantFamily = topResult.species.family?.scientificName || "";
-          
-          console.log(`🌿 PlantNet identified: ${plantType} (${scientificName})`);
-          console.log(`📊 Confidence: ${confidence}`);
-        } else {
-          throw new Error("No PlantNet results");
-        }
+        plantType = "your plant";
+        scientificName = "Unknown species";
+        plantFamily = "Unknown family";
       }
     }
 
@@ -202,7 +161,6 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
 • Scientific name: ${scientificName}
 • Family: ${plantFamily}
 • Confidence: ${confidence}%
-• Identified by PlantNet AI
 • Analysis based on your specific plant image`;
     
     console.log("Plant analysis complete!");
