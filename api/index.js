@@ -1,7 +1,7 @@
 const app = require('../app');
 
-// Vercel serverless function handler
-module.exports = (req, res) => {
+// Initialize the app
+module.exports = async (req, res) => {
   // Set CORS headers for all responses
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

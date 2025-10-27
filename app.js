@@ -13,6 +13,12 @@ const { analyzePlantWithGemini, generateCareWithGemini } = require("./utils/gemi
 const { identifyPlantWithPlantId, checkPlantHealth } = require("./utils/plantid-api");
 const { validatePlantImage } = require("./utils/image-validator");
 
+// Handle dynamic import for node-fetch
+let fetch;
+(async () => {
+  fetch = (await import('node-fetch')).default;
+})();
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -131,8 +137,10 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
         // Fallback to PlantNet if Gemini fails
         console.log("⚠️ Gemini unavailable, trying PlantNet...");
       
-      try {
-        const fetch = (await import('node-fetch')).default;
+        // Use the fetch function that was dynamically imported
+        if (!fetch) {
+          fetch = (await import('node-fetch')).default;
+        }
         
         const formData = new FormData();
         formData.append('images', originalImageData, {
@@ -166,14 +174,6 @@ app.post("/api/analyze", upload.single("image"), async (req, res) => {
         } else {
           throw new Error("No PlantNet results");
         }
-      } catch (plantnetError) {
-        console.log("⚠️ All APIs unavailable");
-        console.log("Using knowledge-based general analysis");
-        
-        plantType = "your plant";
-        scientificName = "Unknown species";
-        plantFamily = "Unknown family";
-      }
       }
     }
 
